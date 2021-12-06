@@ -6,8 +6,8 @@ def get_confusion_matrix(pred, target, cls):
     tn, fp, fn, tp = 0, 0, 0, 0
     for i in range(len(pred)):
         tn += (pred[i] != cls and target[i] != cls)
-        fp += (pred[i] != cls and target[i] == cls)
-        fn += (pred[i] == cls and target[i] != cls)
+        fp += (pred[i] == cls and target[i] != cls)
+        fn += (pred[i] != cls and target[i] == cls)
         tp += (pred[i] == cls and target[i] == cls)
     return tn, fp, fn, tp
 
@@ -29,8 +29,8 @@ def binary_classification_metrics(pred, target):
     # target = np.array([random.randint(0, 1) for i in range(100)])
     # =====================   Here to compute the metrics   ======================== #
     assert len(pred) == len(target) and len(target) > 0
-    label = np.maximum(np.sign(pred - 0.5), 0)
-    tn, fp, fn, tp = get_confusion_matrix(label, target, 1)
+    pred = np.maximum(np.sign(pred - 0.5), 0).astype(int)
+    tn, fp, fn, tp = get_confusion_matrix(pred, target, 1)
     accuracy_score, precision_score, recall_score, f1_score = get_common_metrics(tn, fp, fn, tp)
     roc_auc_score = 0  # TODO
     # ===================== END OF BLOCK ======================= #
@@ -45,6 +45,7 @@ def multiclass_classification_metrics(pred, target):
     # =====================   Here to compute the metrics   ======================== #
     assert len(pred) == len(target) and len(target) > 0
     classes = np.unique(np.concatenate((pred, target)))
+    n, n_classes = len(target), len(classes)
     accuracy_score = np.sum(pred == target) / len(target)
     macro_precision_score, macro_recall_score, macro_f1_score = 0, 0, 0
     for cls in classes:
@@ -53,12 +54,13 @@ def multiclass_classification_metrics(pred, target):
         macro_precision_score += precision_score
         macro_recall_score += recall_score
         macro_f1_score += f1_score
-    macro_precision_score /= len(target)
-    macro_recall_score /= len(target)
-    macro_f1_score /= len(target)
+    macro_precision_score /= n_classes
+    macro_recall_score /= n_classes
+    macro_f1_score /= n_classes
     # ===================== END OF BLOCK ======================= #
     return accuracy_score, macro_precision_score, macro_recall_score, macro_f1_score
     # Comment: What is the micro scores in this case?
+    # Answer: All the scores are the same as `accuracy_score`
 
 
 def multilabel_classification_metrics(pred, target):
@@ -69,10 +71,31 @@ def multilabel_classification_metrics(pred, target):
     # pred = np.array([[random.random() for j in range(4)] for i in range(n)])
     # =====================   Here to compute the metrics   ======================== #
     # Hint: compute the confusion matrix first
-    raise NotImplementedError
+    assert pred.shape == target.shape
+    n, n_labels = pred.shape
+    pred = np.maximum(np.sign(pred - 0.5), 0).astype(int)
+    # noinspection PyUnresolvedReferences
+    accuracy_score = np.sum((pred == target).all(axis=1)) / n
+    macro_precision_score, macro_recall_score, macro_f1_score = 0, 0, 0
+    micro_tn, micro_fp, micro_fn, micro_tp = 0, 0, 0, 0
+    for label in range(n_labels):
+        tn, fp, fn, tp = get_confusion_matrix(pred[:, label], target[:, label], 1)
+        micro_tn += tn
+        micro_fp += fp
+        micro_fn += fn
+        micro_tp += tp
+        _, precision_score, recall_score, f1_score = get_common_metrics(tn, fp, fn, tp)
+        macro_precision_score += precision_score
+        macro_recall_score += recall_score
+        macro_f1_score += f1_score
+    macro_precision_score /= n_labels
+    macro_recall_score /= n_labels
+    macro_f1_score /= n_labels
+    _, micro_precision_score, micro_recall_score, micro_f1_score = get_common_metrics(micro_tn, micro_fp,
+                                                                                      micro_fn, micro_tp)
     # ===================== END OF BLOCK ======================= #
     return accuracy_score, macro_precision_score, macro_recall_score, macro_f1_score, \
-           micro_precision_score, micro_recall_score, micro_f1_score
+        micro_precision_score, micro_recall_score, micro_f1_score
 
 
 def ranking_metrics(pred, rel):
