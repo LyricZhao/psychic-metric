@@ -29,10 +29,23 @@ def binary_classification_metrics(pred, target):
     # target = np.array([random.randint(0, 1) for i in range(100)])
     # =====================   Here to compute the metrics   ======================== #
     assert len(pred) == len(target) and len(target) > 0
-    pred = np.maximum(np.sign(pred - 0.5), 0).astype(int)
+    prob = pred
+    pred = prob >= 0.5
     tn, fp, fn, tp = get_confusion_matrix(pred, target, 1)
     accuracy_score, precision_score, recall_score, f1_score = get_common_metrics(tn, fp, fn, tp)
-    roc_auc_score = 0  # TODO
+    cuts = np.sort(np.unique(np.concatenate(([0.0, 1.0], prob))))[::-1]
+    fpr, tpr = np.zeros_like(cuts), np.zeros_like(cuts)
+    for (i, threshold) in enumerate(cuts):
+        pred = prob >= threshold
+        tn, fp, fn, tp = get_confusion_matrix(pred, target, 1)
+        fpr[i], tpr[i] = fp / (fp + tn), tp / (tp + fn)
+    fpr = np.concatenate(([0], fpr, [1]))
+    tpr = np.concatenate(([0], tpr, [1]))
+    roc_auc_score = 0
+    for i in range(1, len(cuts)):
+        dx = fpr[i] - fpr[i - 1]
+        assert dx >= 0
+        roc_auc_score += dx * tpr[i]
     # ===================== END OF BLOCK ======================= #
     return accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 
@@ -73,7 +86,7 @@ def multilabel_classification_metrics(pred, target):
     # Hint: compute the confusion matrix first
     assert pred.shape == target.shape
     n, n_labels = pred.shape
-    pred = np.maximum(np.sign(pred - 0.5), 0).astype(int)
+    pred = pred >= 0.5
     # noinspection PyUnresolvedReferences
     accuracy_score = np.sum((pred == target).all(axis=1)) / n
     macro_precision_score, macro_recall_score, macro_f1_score = 0, 0, 0
