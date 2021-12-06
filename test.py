@@ -1,5 +1,7 @@
 import numpy
 import random
+from sklearn import metrics
+
 
 from homework import *
 
@@ -17,10 +19,10 @@ if __name__ == '__main__':
     print(multiclass_classification_metrics(pred, target))
 
     # Multi-label classification
-    n = 300
-    pred = np.array([[random.random() for j in range(4)] for i in range(n)])
-    target = np.array([[random.randint(0, 1) for j in range(4)] for i in range(n)])
-    print(multilabel_classification_metrics(pred, target))
+    # n = 300
+    # pred = np.array([[random.random() for j in range(4)] for i in range(n)])
+    # target = np.array([[random.randint(0, 1) for j in range(4)] for i in range(n)])
+    # print(multilabel_classification_metrics(pred, target))
 
     # Ranking metrics
     n = 30
